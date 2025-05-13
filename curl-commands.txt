@@ -1,0 +1,16 @@
+# Create a new user account
+curl -X POST http://localhost:3000/api/auth/register \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "test@example.com",
+  "password": "password123",
+  "name": "Test User"
+}'
+
+# Login with the created account
+curl -X POST http://localhost:3000/api/auth/login \
+-H "Content-Type: application/json" \
+-d '{
+  "email": "test@example.com",
+  "password": "password123"
+}' 
