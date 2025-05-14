@@ -14,6 +14,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      )
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      )
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
@@ -21,7 +38,7 @@ export async function POST(request: Request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'Email already registered' },
         { status: 400 }
       )
     }
@@ -43,7 +60,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       { 
-        message: 'User created successfully',
+        message: 'User registered successfully',
         user: userWithoutPassword
       },
       { status: 201 }
@@ -51,7 +68,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(
-      { error: 'Something went wrong' },
+      { error: 'An error occurred during registration' },
       { status: 500 }
     )
   }
