@@ -6,6 +6,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { SnowAnimation } from "@/components/snow-animation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -14,22 +15,89 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (password !== confirmPassword) {
-      alert("Passwords don't match")
-      return
-    }
-
+    // Reset form state
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      // Client-side validation
+      if (!email || !password || !name) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        })
+        return
+      }
 
-    // In a real app, you would send a request to your backend
-    router.push("/login")
+      if (password !== confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords don't match",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (password.length < 8) {
+        toast({
+          title: "Error",
+          description: "Password must be at least 8 characters long",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (data.error === "Email already registered") {
+          toast({
+            title: "Registration Failed",
+            description: "This email is already registered. Please use a different email or try logging in.",
+            variant: "destructive",
+          })
+        } else {
+          throw new Error(data.error || "Registration failed")
+        }
+        return
+      }
+
+      toast({
+        title: "Success",
+        description: "Account created successfully! Redirecting to login...",
+      })
+
+      // Redirect to login page after successful registration
+      setTimeout(() => {
+        router.push("/login")
+      }, 2000)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Registration failed",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
