@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { cardService } from "@/lib/services/card-service"
 
-export async function POST(request: Request, { params }: { params: { id: string; columnId: string; cardId: string } }) {
+export async function POST(request: Request, { params }: { params: { boardId: string; columnId: string; cardId: string } }) {
   try {
-    const { id: boardId, columnId: sourceColumnId, cardId } = params
+    const { boardId, columnId: sourceColumnId, cardId } = params
     const { destinationColumnId } = await request.json()
 
     if (!destinationColumnId) {

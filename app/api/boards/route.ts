@@ -1,28 +1,66 @@
 import { NextResponse } from "next/server"
-import { boardService } from "@/lib/services/board-service"
-import type { Board } from "@/types"
+import { boardService } from "@/lib/services"
+import { auth } from "@/lib/auth"
+import * as z from "zod"
+
+const createBoardSchema = z.object({
+  name: z.string().min(1, {
+    message: "Board name is required",
+  }),
+  description: z.string(),
+  color: z.string(),
+})
 
 export async function GET() {
-  const response = await boardService.getAllBoards()
-
-  if (response.error) {
-    return NextResponse.json({ error: response.error }, { status: response.status })
-  }
-
-  return NextResponse.json(response.data)
-}
-
-export async function POST(request: Request) {
   try {
-    const data = (await request.json()) as Omit<Board, "id">
-    const response = await boardService.createBoard(data)
-
-    if (response.error) {
-      return NextResponse.json({ error: response.error }, { status: response.status })
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    return NextResponse.json(response.data, { status: 201 })
+    const boards = await boardService.getUserBoards(session.user.id)
+    return NextResponse.json(boards)
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request data" }, { status: 400 })
+    console.error("[GET_BOARDS_ERROR]", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const validatedFields = createBoardSchema.safeParse(body)
+
+    if (!validatedFields.success) {
+      return NextResponse.json(
+        { error: "Invalid fields", details: validatedFields.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const { name, description, color } = validatedFields.data
+
+    const board = await boardService.createBoard({
+      name,
+      description,
+      color,
+      ownerId: session.user.id,
+    })
+
+    return NextResponse.json(board, { status: 201 })
+  } catch (error) {
+    console.error("[CREATE_BOARD_ERROR]", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }

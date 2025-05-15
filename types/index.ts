@@ -1,11 +1,8 @@
 // Định nghĩa kiểu dữ liệu
 export type User = {
   id: string
-  name: string
-  email?: string
-  initials: string
-  avatar?: string
-  role?: "admin" | "editor" | "viewer"
+  email: string
+  name: string | null
 }
 
 export type Label = {
@@ -24,34 +21,49 @@ export type CardMember = {
 export type Card = {
   id: string
   title: string
-  description?: string
-  labels: string[] | Label[]
-  dueDate?: string
-  members?: CardMember[]
-  attachments?: number
-  comments?: number
-  order?: number
-  columnId?: string
+  description?: string | null
+  order: number
+  columnId: string
+  column?: Column
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export type Column = {
   id: string
   name: string
+  description?: string | null
+  color?: string
+  boardId: string
+  board?: Board
+  order: number
+  createdAt: Date | string
+  updatedAt: Date | string
   cards: Card[]
-  order?: number
-  boardId?: string
 }
 
 export type Board = {
   id: string
   name: string
-  description: string
-  totalTasks: number
+  description: string | null
   color: string
-  members?: number
-  columns?: Column[]
-  createdAt?: string
-  updatedAt?: string
+  ownerId: string
+  owner?: {
+    id: string
+    name: string | null
+    email: string
+  }
+  members?: {
+    id: string
+    name: string | null
+    email: string
+  }[]
+  totalTasks: number
+  createdAt: Date | string
+  updatedAt: Date | string
+  _count?: {
+    columns: number
+  }
 }
 
 export type Collection = {
@@ -104,8 +116,8 @@ export type Activity = {
 export type ApiResponse<T> = {
   data?: T
   error?: string
+  status?: number
   message?: string
-  status: number
 }
 
 export type Project = {

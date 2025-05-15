@@ -2,8 +2,8 @@ import { NextResponse } from "next/server"
 import { boardService } from "@/lib/services/board-service"
 import type { Column } from "@/types"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const boardId = params.id
+export async function GET(request: Request, { params }: { params: { boardId: string } }) {
+  const boardId = params.boardId
   const response = await boardService.getColumns(boardId)
 
   if (response.error) {
@@ -13,9 +13,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   return NextResponse.json(response.data)
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: { boardId: string } }) {
   try {
-    const boardId = params.id
+    const boardId = params.boardId
     const data = (await request.json()) as Omit<Column, "id">
     const response = await boardService.addColumn(boardId, data)
 

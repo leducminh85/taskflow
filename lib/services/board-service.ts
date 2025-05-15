@@ -1,25 +1,84 @@
-import { db } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
+import { ApiError } from "@/lib/utils/api-error"
 import type { ApiResponse, Board, Column } from "@/types"
 
-export const boardService = {
+const boardService = {
   getAllBoards: async (): Promise<ApiResponse<Board[]>> => {
     try {
-      const boards = db.boards.getAll()
+      const boards = await prisma.board.findMany({
+        include: {
+          _count: {
+            select: { columns: true }
+          }
+        },
+        orderBy: { updatedAt: 'desc' }
+      })
+
       return {
         data: boards,
         status: 200,
       }
     } catch (error) {
-      return {
-        error: "Failed to fetch boards",
-        status: 500,
+      console.error("[GET_ALL_BOARDS_ERROR]", error)
+      throw new ApiError(500, "Failed to fetch boards")
+    }
+  },
+
+  getUserBoards: async (userId: string): Promise<ApiResponse<Board[]>> => {
+    try {
+      const boards = await prisma.board.findMany({
+        where: {
+          OR: [
+            { ownerId: userId },
+            { members: { some: { id: userId } } }
+          ]
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          members: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          _count: {
+            select: { 
+              columns: true 
+            }
+          }
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      })
+
+      return { 
+        data: boards as unknown as Board[],
+        status: 200
       }
+    } catch (error) {
+      console.error("[GET_USER_BOARDS_ERROR]", error)
+      throw new ApiError(500, "Failed to get user boards")
     }
   },
 
   getBoardById: async (id: string): Promise<ApiResponse<Board>> => {
     try {
-      const board = db.boards.getById(id)
+      const board = await prisma.board.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: { columns: true }
+          }
+        }
+      })
 
       if (!board) {
         return {
@@ -33,123 +92,99 @@ export const boardService = {
         status: 200,
       }
     } catch (error) {
-      return {
-        error: "Failed to fetch board",
-        status: 500,
-      }
+      console.error("[GET_BOARD_BY_ID_ERROR]", error)
+      throw new ApiError(500, "Failed to fetch board")
     }
   },
 
-  createBoard: async (boardData: Omit<Board, "id">): Promise<ApiResponse<Board>> => {
+  createBoard: async (data: { name: string, description?: string | null, color: string, ownerId: string }): Promise<ApiResponse<Board>> => {
     try {
-      const newBoard = db.boards.create(boardData)
-
-      // Thêm hoạt động
-      db.activities.create({
-        user: {
-          name: "Người dùng hiện tại",
-          initials: "ND",
+      const board = await prisma.board.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          ownerId: data.ownerId,
+          totalTasks: 0
         },
-        action: `đã tạo bảng mới "${newBoard.name}"`,
-        time: "Vừa xong",
-        boardId: newBoard.id,
-        boardName: newBoard.name,
-        type: "board",
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
       })
 
       return {
-        data: newBoard,
+        data: board as unknown as Board,
         status: 201,
-        message: "Board created successfully",
+        message: "Board created successfully"
       }
     } catch (error) {
-      return {
-        error: "Failed to create board",
-        status: 500,
-      }
+      console.error("[CREATE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to create board")
     }
   },
 
   updateBoard: async (id: string, data: Partial<Board>): Promise<ApiResponse<Board>> => {
     try {
-      const board = db.boards.getById(id)
-
-      if (!board) {
-        return {
-          error: "Board not found",
-          status: 404,
+      const board = await prisma.board.update({
+        where: { id },
+        data,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          members: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
         }
-      }
-
-      const updatedBoard = db.boards.update(id, data)
-
-      // Thêm hoạt động
-      db.activities.create({
-        user: {
-          name: "Người dùng hiện tại",
-          initials: "ND",
-        },
-        action: `đã cập nhật bảng "${updatedBoard.name}"`,
-        time: "Vừa xong",
-        boardId: updatedBoard.id,
-        boardName: updatedBoard.name,
-        type: "board",
       })
 
       return {
-        data: updatedBoard,
+        data: board,
         status: 200,
         message: "Board updated successfully",
       }
     } catch (error) {
-      return {
-        error: "Failed to update board",
-        status: 500,
-      }
+      console.error("[UPDATE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to update board")
     }
   },
 
   deleteBoard: async (id: string): Promise<ApiResponse<Board>> => {
     try {
-      const board = db.boards.getById(id)
-
-      if (!board) {
-        return {
-          error: "Board not found",
-          status: 404,
-        }
-      }
-
-      const deletedBoard = db.boards.delete(id)
-
-      // Thêm hoạt động
-      db.activities.create({
-        user: {
-          name: "Người dùng hiện tại",
-          initials: "ND",
-        },
-        action: `đã xóa bảng "${deletedBoard.name}"`,
-        time: "Vừa xong",
-        type: "board",
+      await prisma.board.delete({
+        where: { id }
       })
 
-      return {
-        data: deletedBoard,
-        status: 200,
-        message: "Board deleted successfully",
-      }
+      return { data: { message: "Board deleted successfully" } }
     } catch (error) {
-      return {
-        error: "Failed to delete board",
-        status: 500,
-      }
+      console.error("[DELETE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to delete board")
     }
   },
 
   // Các hàm liên quan đến cột
   getColumns: async (boardId: string): Promise<ApiResponse<Column[]>> => {
     try {
-      const board = db.boards.getById(boardId)
+      const board = await prisma.board.findUnique({
+        where: { id: boardId },
+        include: {
+          columns: true
+        }
+      })
 
       if (!board) {
         return {
@@ -163,16 +198,17 @@ export const boardService = {
         status: 200,
       }
     } catch (error) {
-      return {
-        error: "Failed to fetch columns",
-        status: 500,
-      }
+      console.error("[GET_COLUMNS_ERROR]", error)
+      throw new ApiError(500, "Failed to fetch columns")
     }
   },
 
   addColumn: async (boardId: string, columnData: Omit<Column, "id">): Promise<ApiResponse<Column>> => {
     try {
-      const board = db.boards.getById(boardId)
+      const board = await prisma.board.findUnique({
+        where: { id: boardId },
+        include: { columns: true }
+      })
 
       if (!board) {
         return {
@@ -181,21 +217,22 @@ export const boardService = {
         }
       }
 
-      const newColumn = db.columns.create(boardId, columnData)
-
-      // Thêm hoạt động
-      db.activities.create({
-        user: {
-          name: "Người dùng hiện tại",
-          initials: "ND",
+      const newColumn = await prisma.column.create({
+        data: {
+          name: columnData.name,
+          boardId: board.id,
+          color: columnData.color,
+          description: columnData.description
         },
-        action: `đã thêm cột "${newColumn.name}" vào bảng "${board.name}"`,
-        time: "Vừa xong",
-        boardId: board.id,
-        boardName: board.name,
-        columnId: newColumn.id,
-        columnName: newColumn.name,
-        type: "board",
+        include: {
+          board: {
+            select: {
+              id: true,
+              name: true,
+              color: true
+            }
+          }
+        }
       })
 
       return {
@@ -204,16 +241,17 @@ export const boardService = {
         message: "Column added successfully",
       }
     } catch (error) {
-      return {
-        error: "Failed to add column",
-        status: 500,
-      }
+      console.error("[ADD_COLUMN_ERROR]", error)
+      throw new ApiError(500, "Failed to add column")
     }
   },
 
   updateColumn: async (boardId: string, columnId: string, data: Partial<Column>): Promise<ApiResponse<Column>> => {
     try {
-      const board = db.boards.getById(boardId)
+      const board = await prisma.board.findUnique({
+        where: { id: boardId },
+        include: { columns: true }
+      })
 
       if (!board) {
         return {
@@ -231,26 +269,19 @@ export const boardService = {
         }
       }
 
-      const updatedColumn = db.columns.update(boardId, columnId, data)
-
-      // Thêm hoạt động nếu tên cột thay đổi
-      if (data.name && data.name !== column.name) {
-        db.activities.create({
-          user: {
-            name: "Người dùng hiện tại",
-            initials: "ND",
-          },
-          action: `đã đổi tên cột từ "${column.name}" thành "${data.name}" trong bảng "${board.name}"`,
-          time: "Vừa xong",
-          boardId: board.id,
-          boardName: board.name,
-          columnId: columnId,
-          columnName: data.name,
-          before: column.name,
-          after: data.name,
-          type: "board",
-        })
-      }
+      const updatedColumn = await prisma.column.update({
+        where: { id: columnId },
+        data,
+        include: {
+          board: {
+            select: {
+              id: true,
+              name: true,
+              color: true
+            }
+          }
+        }
+      })
 
       return {
         data: updatedColumn,
@@ -258,16 +289,17 @@ export const boardService = {
         message: "Column updated successfully",
       }
     } catch (error) {
-      return {
-        error: "Failed to update column",
-        status: 500,
-      }
+      console.error("[UPDATE_COLUMN_ERROR]", error)
+      throw new ApiError(500, "Failed to update column")
     }
   },
 
   deleteColumn: async (boardId: string, columnId: string): Promise<ApiResponse<Column>> => {
     try {
-      const board = db.boards.getById(boardId)
+      const board = await prisma.board.findUnique({
+        where: { id: boardId },
+        include: { columns: true }
+      })
 
       if (!board) {
         return {
@@ -285,21 +317,17 @@ export const boardService = {
         }
       }
 
-      const deletedColumn = db.columns.delete(boardId, columnId)
-
-      // Thêm hoạt động
-      db.activities.create({
-        user: {
-          name: "Người dùng hiện tại",
-          initials: "ND",
-        },
-        action: `đã xóa cột "${deletedColumn.name}" khỏi bảng "${board.name}"`,
-        time: "Vừa xong",
-        boardId: board.id,
-        boardName: board.name,
-        columnId: columnId,
-        columnName: deletedColumn.name,
-        type: "board",
+      const deletedColumn = await prisma.column.delete({
+        where: { id: columnId },
+        include: {
+          board: {
+            select: {
+              id: true,
+              name: true,
+              color: true
+            }
+          }
+        }
       })
 
       return {
@@ -308,10 +336,92 @@ export const boardService = {
         message: "Column deleted successfully",
       }
     } catch (error) {
-      return {
-        error: "Failed to delete column",
-        status: 500,
-      }
+      console.error("[DELETE_COLUMN_ERROR]", error)
+      throw new ApiError(500, "Failed to delete column")
     }
   },
+
+  // Tạo board mới
+  async createBoard(data: {
+    name: string
+    description?: string
+    color: string
+    ownerId: string
+  }) {
+    try {
+      const board = await prisma.board.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          color: data.color,
+          ownerId: data.ownerId
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      return { data: board }
+    } catch (error) {
+      console.error("[CREATE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to create board")
+    }
+  },
+
+  // Cập nhật board
+  async updateBoard(boardId: string, data: {
+    name?: string
+    description?: string
+    color?: string
+  }) {
+    try {
+      const board = await prisma.board.update({
+        where: { id: boardId },
+        data,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          members: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      return { data: board }
+    } catch (error) {
+      console.error("[UPDATE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to update board")
+    }
+  },
+
+  // Xóa board
+  async deleteBoard(boardId: string) {
+    try {
+      await prisma.board.delete({
+        where: { id: boardId }
+      })
+
+      return { data: { message: "Board deleted successfully" } }
+    } catch (error) {
+      console.error("[DELETE_BOARD_ERROR]", error)
+      throw new ApiError(500, "Failed to delete board")
+    }
+  }
 }
+
+export { boardService }

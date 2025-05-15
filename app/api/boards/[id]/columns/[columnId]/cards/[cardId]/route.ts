@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { cardService } from "@/lib/services/card-service"
 
-export async function GET(request: Request, { params }: { params: { id: string; columnId: string; cardId: string } }) {
-  const { id: boardId, columnId, cardId } = params
+export async function GET(request: Request, { params }: { params: { boardId: string; columnId: string; cardId: string } }) {
+  const { boardId, columnId, cardId } = params
   const response = await cardService.getCardById(boardId, columnId, cardId)
 
   if (response.error) {
@@ -14,10 +14,10 @@ export async function GET(request: Request, { params }: { params: { id: string; 
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string; columnId: string; cardId: string } },
+  { params }: { params: { boardId: string; columnId: string; cardId: string } },
 ) {
   try {
-    const { id: boardId, columnId, cardId } = params
+    const { boardId, columnId, cardId } = params
     const data = await request.json()
     const response = await cardService.updateCard(boardId, columnId, cardId, data)
 
@@ -33,9 +33,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; columnId: string; cardId: string } },
+  { params }: { params: { boardId: string; columnId: string; cardId: string } },
 ) {
-  const { id: boardId, columnId, cardId } = params
+  const { boardId, columnId, cardId } = params
   const response = await cardService.deleteCard(boardId, columnId, cardId)
 
   if (response.error) {

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { boardService } from "@/lib/services/board-service"
 
-export async function PATCH(request: Request, { params }: { params: { id: string; columnId: string } }) {
+export async function PATCH(request: Request, { params }: { params: { boardId: string; columnId: string } }) {
   try {
-    const { id: boardId, columnId } = params
+    const { boardId, columnId } = params
     const data = await request.json()
     const response = await boardService.updateColumn(boardId, columnId, data)
 
@@ -17,8 +17,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string; columnId: string } }) {
-  const { id: boardId, columnId } = params
+export async function DELETE(request: Request, { params }: { params: { boardId: string; columnId: string } }) {
+  const { boardId, columnId } = params
   const response = await boardService.deleteColumn(boardId, columnId)
 
   if (response.error) {

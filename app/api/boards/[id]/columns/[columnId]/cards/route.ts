@@ -2,8 +2,8 @@ import { NextResponse } from "next/server"
 import { cardService } from "@/lib/services/card-service"
 import type { Card } from "@/types"
 
-export async function GET(request: Request, { params }: { params: { id: string; columnId: string } }) {
-  const { id: boardId, columnId } = params
+export async function GET(request: Request, { params }: { params: { boardId: string; columnId: string } }) {
+  const { boardId, columnId } = params
   const response = await cardService.getCardsByColumn(boardId, columnId)
 
   if (response.error) {
@@ -13,9 +13,9 @@ export async function GET(request: Request, { params }: { params: { id: string; 
   return NextResponse.json(response.data)
 }
 
-export async function POST(request: Request, { params }: { params: { id: string; columnId: string } }) {
+export async function POST(request: Request, { params }: { params: { boardId: string; columnId: string } }) {
   try {
-    const { id: boardId, columnId } = params
+    const { boardId, columnId } = params
     const data = (await request.json()) as Omit<Card, "id">
     const response = await cardService.addCard(boardId, columnId, data)
 
