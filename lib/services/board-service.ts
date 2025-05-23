@@ -48,23 +48,19 @@ const boardService = {
               email: true
             }
           },
-          columns: true
+          _count: {
+            select: {
+              columns: true
+            }
+          }
         },
         orderBy: {
           updatedAt: 'desc'
         }
       })
 
-      // Transform the response to include _count
-      const transformedBoards = boards.map(board => ({
-        ...board,
-        _count: {
-          columns: board.columns.length
-        }
-      })) as unknown as Board[]
-
       return { 
-        data: transformedBoards,
+        data: boards as unknown as Board[],
         status: 200
       }
     } catch (error) {

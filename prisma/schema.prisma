@@ -84,8 +84,8 @@ model Card {
   updatedAt   DateTime
   Column      Column       @relation(fields: [columnId], references: [id], onDelete: Cascade)
   Comment     Comment[]
-  CardMember  CardMember[]
-  Label       Label[]
+  CardMember  CardMember[] @relation("CardToCardMember")
+  Label       Label[]      @relation("CardToLabel")
 }
 
 model CardMember {
@@ -93,7 +93,7 @@ model CardMember {
   name     String
   avatar   String?
   initials String
-  Card     Card[]
+  Card     Card[]  @relation("CardToCardMember")
 }
 
 model Collection {
@@ -123,7 +123,7 @@ model Label {
   id    String  @id
   name  String?
   color String
-  Card  Card[]
+  Card  Card[]  @relation("CardToLabel")
 }
 
 enum ActivityType {
