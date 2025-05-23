@@ -1,38 +1,141 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ownedBoards Board[] @relation("BoardOwner")
-  memberOfBoards Board[] @relation("BoardMembers")
+  id             String     @id @default(uuid())
+  email          String     @unique
+  password       String
+  name           String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  avatar         String?
+  initials       String     @default("")
+  role           Role       @default(VIEWER)
+  Activity       Activity[]
+  ownedBoards    Board[]    @relation("BoardOwner")
+  Comment        Comment[]
+  memberOfBoards Board[]    @relation("BoardMembers")
 }
 
 model Board {
-  id          String    @id @default(uuid())
+  id           String      @id @default(uuid())
+  name         String
+  description  String
+  totalTasks   Int         @default(0)
+  color        String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  ownerId      String
+  collectionId String?
+  Activity     Activity[]
+  Collection   Collection? @relation(fields: [collectionId], references: [id])
+  owner        User        @relation("BoardOwner", fields: [ownerId], references: [id])
+  columns      Column[]
+  members      User[]      @relation("BoardMembers")
+}
+
+model Column {
+  id        String   @id @default(uuid())
+  name      String
+  order     Int      @default(0)
+  boardId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Card      Card[]
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id         String       @id
+  action     String
+  type       ActivityType @default(OTHER)
+  userId     String
+  boardId    String
+  cardId     String?
+  cardName   String?
+  columnId   String?
+  columnName String?
+  before     String?
+  after      String?
+  timestamp  DateTime     @default(now())
+  read       Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime
+  Board      Board        @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  User       User         @relation(fields: [userId], references: [id])
+}
+
+model Card {
+  id          String       @id
+  title       String
+  description String?
+  dueDate     DateTime?
+  order       Int          @default(0)
+  columnId    String
+  attachments Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime
+  Column      Column       @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  Comment     Comment[]
+  CardMember  CardMember[]
+  Label       Label[]
+}
+
+model CardMember {
+  id       String  @id
+  name     String
+  avatar   String?
+  initials String
+  Card     Card[]
+}
+
+model Collection {
+  id          String   @id
   name        String
   description String?
+  boardCount  Int      @default(0)
   color       String
-  ownerId     String
-  owner       User      @relation("BoardOwner", fields: [ownerId], references: [id])
-  members     User[]    @relation("BoardMembers")
-  totalTasks  Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Board       Board[]
+}
 
-  @@index([ownerId])
-} 
+model Comment {
+  id        String   @id
+  text      String
+  userId    String
+  cardId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model Label {
+  id    String  @id
+  name  String?
+  color String
+  Card  Card[]
+}
+
+enum ActivityType {
+  CARD
+  BOARD
+  COMMENT
+  MEMBER
+  OTHER
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}

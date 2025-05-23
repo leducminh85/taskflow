@@ -36,10 +36,10 @@ export type Column = {
   color?: string
   boardId: string
   board?: Board
-  order: number
+  order?: number
   createdAt: Date | string
   updatedAt: Date | string
-  cards: Card[]
+  cards?: Card[]
 }
 
 export type Board = {
@@ -58,6 +58,7 @@ export type Board = {
     name: string | null
     email: string
   }[]
+  columns?: Column[]
   totalTasks: number
   createdAt: Date | string
   updatedAt: Date | string
