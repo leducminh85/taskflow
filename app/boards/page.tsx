@@ -3,9 +3,25 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { LayoutGrid, Plus } from "lucide-react"
+import { LayoutGrid, Plus, MoreHorizontal, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type Board = {
   id: string
@@ -30,6 +46,7 @@ type Board = {
 export default function BoardsPage() {
   const [boards, setBoards] = useState<Board[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [boardToDelete, setBoardToDelete] = useState<Board | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -59,6 +76,36 @@ export default function BoardsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDeleteBoard = async (board: Board) => {
+    try {
+      const response = await fetch(`/api/boards/${board.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setBoards((prev) => prev.filter((b) => b.id !== board.id))
+        toast({
+          title: "Thành công",
+          description: "Đã xóa bảng thành công",
+        })
+      } else {
+        const data = await response.json()
+        toast({
+          title: "Lỗi",
+          description: data.error || "Không thể xóa bảng",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa bảng",
+        variant: "destructive",
+      })
+    }
+    setBoardToDelete(null)
   }
 
   if (isLoading) {
@@ -91,14 +138,32 @@ export default function BoardsPage() {
           <Card key={board.id} className="overflow-hidden">
             <div className="h-2" style={{ backgroundColor: board.color }} />
             <CardContent className="p-6">
-              <div className="flex items-start mb-4">
-                <div className="p-2 rounded-md mr-4" style={{ backgroundColor: `${board.color}20` }}>
-                  <LayoutGrid className="h-6 w-6" style={{ color: board.color }} />
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start">
+                  <div className="p-2 rounded-md mr-4" style={{ backgroundColor: `${board.color}20` }}>
+                    <LayoutGrid className="h-6 w-6" style={{ color: board.color }} />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">{board.name}</h3>
+                    <p className="text-sm text-gray-500">{board._count.columns} công việc</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium text-lg">{board.name}</h3>
-                  <p className="text-sm text-gray-500">{board._count.columns} công việc</p>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() => setBoardToDelete(board)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Xóa bảng
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <p className="text-sm text-gray-700 mb-6">{board.description}</p>
               {/* <div className="flex items-center justify-between mb-4">
@@ -126,6 +191,26 @@ export default function BoardsPage() {
           </Card>
         ))}
       </div>
+
+      <AlertDialog open={!!boardToDelete} onOpenChange={() => setBoardToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa bảng này?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Bảng này sẽ bị xóa vĩnh viễn khỏi hệ thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => boardToDelete && handleDeleteBoard(boardToDelete)}
+            >
+              Xóa bảng
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
