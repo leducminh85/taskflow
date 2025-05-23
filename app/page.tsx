@@ -9,17 +9,20 @@ import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ActivityDetailModal } from "@/components/activity-detail-modal"
 import { useAuth } from "@/components/auth-provider"
+import { useToast } from "@/hooks/use-toast"
 import type { Activity, Project } from "@/types"
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
   const [stats, setStats] = useState({
-    totalBoards: 23,
-    teamMembers: 12,
-    collections: 6,
-    recentActivities: 24,
+    totalBoards: 0,
+    teamMembers: 0,
+    collections: 0,
+    recentActivities: 0,
   })
+  const [isLoading, setIsLoading] = useState(true)
 
   const [projects, setProjects] = useState<Project[]>(recentProjects)
   const [activities, setActivities] = useState<Activity[]>([])
@@ -32,6 +35,54 @@ export default function HomePage() {
       router.push("/login")
     }
   }, [isAuthenticated, router])
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/stats")
+        const data = await response.json()
+
+        if (response.ok && data.data) {
+          setStats(data.data)
+        } else {
+          console.error("Failed to fetch stats:", data.error)
+          toast({
+            title: "Error",
+            description: "Failed to load dashboard statistics",
+            variant: "destructive",
+          })
+          // Set default values in case of error
+          setStats({
+            totalBoards: 0,
+            teamMembers: 0,
+            collections: 0,
+            recentActivities: 0,
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard statistics",
+          variant: "destructive",
+        })
+        // Set default values in case of error
+        setStats({
+          totalBoards: 0,
+          teamMembers: 0,
+          collections: 0,
+          recentActivities: 0,
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchStats()
+    }
+  }, [isAuthenticated, toast])
 
   // Load activities from localStorage or use sample data
   useEffect(() => {
@@ -76,6 +127,14 @@ export default function HomePage() {
 
   if (!isAuthenticated) {
     return null
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
   }
 
   return (
