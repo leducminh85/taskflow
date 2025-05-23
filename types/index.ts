@@ -7,14 +7,14 @@ export type User = {
 
 export type Label = {
   id: string
-  name?: string
+  name?: string | null
   color: string
 }
 
 export type CardMember = {
   id: string
   name: string
-  avatar?: string
+  avatar?: string | null
   initials: string
 }
 
@@ -22,46 +22,49 @@ export type Card = {
   id: string
   title: string
   description?: string | null
+  dueDate?: Date | null
   order: number
   columnId: string
+  attachments: number
+  createdAt: Date
+  updatedAt: Date
   column?: Column
-  createdAt: Date | string
-  updatedAt: Date | string
+  comments?: Comment[]
+  members?: CardMember[]
+  labels?: Label[]
 }
 
 export type Column = {
   id: string
   name: string
-  description?: string | null
-  color?: string
+  order: number
   boardId: string
+  createdAt: Date
+  updatedAt: Date
   board?: Board
-  order?: number
-  createdAt: Date | string
-  updatedAt: Date | string
   cards?: Card[]
 }
 
 export type Board = {
   id: string
   name: string
-  description: string | null
+  description: string
+  totalTasks: number
   color: string
+  createdAt: Date
+  updatedAt: Date
   ownerId: string
-  owner?: {
+  collectionId?: string | null
+  owner: {
     id: string
-    name: string | null
+    name: string
     email: string
   }
-  members?: {
+  members: {
     id: string
-    name: string | null
+    name: string
     email: string
   }[]
-  columns?: Column[]
-  totalTasks: number
-  createdAt: Date | string
-  updatedAt: Date | string
   _count?: {
     columns: number
   }
@@ -70,54 +73,57 @@ export type Board = {
 export type Collection = {
   id: string
   name: string
-  description?: string
+  description?: string | null
   boardCount: number
   color: string
-  icon?: string
-  updatedAt?: string
+  icon?: string | null
+  createdAt: Date
+  updatedAt: Date
+  boards?: Board[]
 }
 
 export type Comment = {
   id: string
-  user: {
-    name: string
-    avatar?: string
-    initials: string
-  }
   text: string
-  time: string
-  isCurrentUser?: boolean
+  userId: string
+  cardId: string
+  createdAt: Date
+  updatedAt: Date
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
 }
 
 export type Activity = {
   id: string
-  user: {
-    id?: string
-    name: string
-    initials: string
-    avatar?: string
-  }
   action: string
-  time: string
-  boardId?: string
-  boardName?: string
-  cardId?: string
-  cardName?: string
-  columnId?: string
-  columnName?: string
-  before?: string
-  after?: string
-  comments?: Comment[]
-  liked?: boolean
-  timestamp?: number
-  type?: "card" | "board" | "comment" | "member" | "other"
-  read?: boolean
+  type: "CARD" | "BOARD" | "COMMENT" | "MEMBER" | "OTHER"
+  userId: string
+  boardId: string
+  cardId?: string | null
+  cardName?: string | null
+  columnId?: string | null
+  columnName?: string | null
+  before?: string | null
+  after?: string | null
+  timestamp: Date
+  read: boolean
+  createdAt: Date
+  updatedAt: Date
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
+  board?: Board
 }
 
 export type ApiResponse<T> = {
   data?: T
   error?: string
-  status?: number
+  status: number
   message?: string
 }
 

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import { boardService } from "@/lib/services"
 import { auth } from "@/lib/auth"
 
-export async function DELETE(
+export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await auth()
@@ -12,8 +12,46 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const boardId = params.id
-    const result = await boardService.deleteBoard(boardId)
+    const { id } = context.params
+    if (!id) {
+      return NextResponse.json({ error: "Board ID is required" }, { status: 400 })
+    }
+
+    const result = await boardService.getBoardById(id)
+
+    if (result.error) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.status || 500 }
+      )
+    }
+
+    return NextResponse.json({ data: result.data })
+  } catch (error) {
+    console.error("[GET_BOARD_ERROR]", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  context: { params: { id: string } }
+) {
+  try {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = context.params
+    if (!id) {
+      return NextResponse.json({ error: "Board ID is required" }, { status: 400 })
+    }
+
+    const result = await boardService.deleteBoard(id)
 
     if (result.error) {
       return NextResponse.json(

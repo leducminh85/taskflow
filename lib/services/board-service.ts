@@ -74,6 +74,20 @@ const boardService = {
       const board = await prisma.board.findUnique({
         where: { id },
         include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          members: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
           _count: {
             select: { columns: true }
           }

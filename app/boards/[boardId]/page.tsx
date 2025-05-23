@@ -113,6 +113,26 @@ const boards = [
 ]
 
 // Định nghĩa kiểu dữ liệu
+type APIBoard = {
+  id: string
+  name: string
+  description: string
+  color: string
+  owner: {
+    id: string
+    name: string
+    email: string
+  }
+  members: {
+    id: string
+    name: string
+    email: string
+  }[]
+  _count: {
+    columns: number
+  }
+}
+
 type CardType = {
   id: string
   title: string
@@ -182,12 +202,13 @@ type CardDetailType = {
   isJoined?: boolean
 }
 
-export default function BoardPage({ params }: { params: { id: string } }) {
+export default function BoardPage({ params }: { params: { boardId: string } }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false)
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null)
   const [board, setBoard] = useState<Board | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [columnName, setColumnName] = useState("")
   const [selectedCard, setSelectedCard] = useState<CardDetailType | null>(null)
@@ -196,65 +217,82 @@ export default function BoardPage({ params }: { params: { id: string } }) {
   const columnNameInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  // Tìm dữ liệu bảng dựa trên ID
+  // Fetch board data from API
   useEffect(() => {
-    // Trong ứng dụng thực tế, bạn sẽ gọi API để lấy dữ liệu bảng
-    const foundBoard = boards.find((b) => b.id === params.id)
+    const fetchBoardData = async () => {
+      try {
+        const response = await fetch(`/api/boards/${params.boardId}`)
+        const data = await response.json()
 
-    // Tìm tên bảng từ boardsData nếu có
-    const boardDataFromList = boardsData.find((b) => b.id === params.id)
-
-    // Nếu không tìm thấy bảng cụ thể, tạo một bảng mặc định với ID đó
-    if (!foundBoard) {
-      const defaultBoard: Board = {
-        id: params.id,
-        name: boardDataFromList ? boardDataFromList.name : `Bảng ${params.id}`,
-        color: boardDataFromList ? boardDataFromList.color : getRandomColor(),
-        members: Math.floor(Math.random() * 5) + 1,
-        description: boardDataFromList ? boardDataFromList.description : "Mô tả bảng này chưa được cập nhật",
-        columns: [
-          {
-            id: "col-1",
-            name: "Cần làm",
-            cards: [
+        if (response.ok) {
+          const apiBoard = data.data as APIBoard
+          
+          // Combine API board data with sample columns/cards
+          const defaultBoard: Board = {
+            id: apiBoard.id,
+            name: apiBoard.name,
+            color: apiBoard.color,
+            members: apiBoard.members.length,
+            description: apiBoard.description,
+            columns: [
               {
-                id: "card-1",
-                title: "Công việc mẫu 1",
-                labels: [getRandomColor()],
-                description: "Mô tả công việc mẫu 1",
+                id: "col-1",
+                name: "Cần làm",
+                cards: [
+                  {
+                    id: "card-1",
+                    title: "Công việc mẫu 1",
+                    labels: [getRandomColor()],
+                    description: "Mô tả công việc mẫu 1",
+                  },
+                  {
+                    id: "card-2",
+                    title: "Công việc mẫu 2",
+                    labels: [getRandomColor()],
+                    description: "Mô tả công việc mẫu 2",
+                  },
+                ],
               },
               {
-                id: "card-2",
-                title: "Công việc mẫu 2",
-                labels: [getRandomColor()],
-                description: "Mô tả công việc mẫu 2",
+                id: "col-2",
+                name: "Đang thực hiện",
+                cards: [
+                  {
+                    id: "card-3",
+                    title: "Công việc mẫu 3",
+                    labels: [getRandomColor()],
+                    description: "Mô tả công việc mẫu 3",
+                  },
+                ],
+              },
+              {
+                id: "col-3",
+                name: "Đã hoàn thành",
+                cards: [],
               },
             ],
-          },
-          {
-            id: "col-2",
-            name: "Đang thực hiện",
-            cards: [
-              {
-                id: "card-3",
-                title: "Công việc mẫu 3",
-                labels: [getRandomColor()],
-                description: "Mô tả công việc mẫu 3",
-              },
-            ],
-          },
-          {
-            id: "col-3",
-            name: "Đã hoàn thành",
-            cards: [],
-          },
-        ],
+          }
+          setBoard(defaultBoard)
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to fetch board",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch board",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
       }
-      setBoard(defaultBoard)
-    } else {
-      setBoard(foundBoard)
     }
-  }, [params.id])
+
+    fetchBoardData()
+  }, [params.boardId, toast])
 
   // Hàm tạo màu ngẫu nhiên
   function getRandomColor() {
@@ -547,10 +585,18 @@ export default function BoardPage({ params }: { params: { id: string } }) {
     { id: "member-5", name: "Hoàng Văn E", initials: "HE", email: "hoangvane@example.com" },
   ]
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
+
   if (!board) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p>Đang tải dữ liệu bảng...</p>
+        <p>Không tìm thấy bảng</p>
       </div>
     )
   }
